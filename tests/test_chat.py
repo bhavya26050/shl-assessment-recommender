@@ -1,6 +1,11 @@
 import pytest
 from app.schemas import ChatRequest, ChatResponse, Message, Recommendation
 from app.guardrails import detect_injection, detect_off_topic, validate_turn_count, validate_recommendations_in_catalog
+from app.agent import SHLAgent
+from app.catalog import load_catalog
+from app.main import _catalog_path
+from app.retriever import CatalogRetriever
+from google.api_core.exceptions import ResourceExhausted
 
 
 # --- Schema Tests ---
@@ -72,3 +77,18 @@ def test_validate_recommendations_in_catalog():
     assert validate_recommendations_in_catalog(["Java 8 (New)", "OPQ32r"], catalog) == ["Java 8 (New)", "OPQ32r"]
     assert validate_recommendations_in_catalog(["Fake Test"], catalog) == []
     assert validate_recommendations_in_catalog(["java 8 (new)"], catalog) == ["Java 8 (New)"]
+
+
+def test_agent_uses_retrieval_fallback_when_llm_is_rate_limited():
+    catalog = load_catalog(str(_catalog_path()))
+    agent = SHLAgent(CatalogRetriever(catalog))
+
+    def raise_quota_error(messages):
+        raise ResourceExhausted("quota")
+
+    agent._extract_requirements = raise_quota_error
+
+    response = agent.process([Message(role="user", content="I need a Java developer assessment")])
+
+    assert response.recommendations
+    assert "falling back to catalog search" in response.reply.lower()

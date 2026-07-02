@@ -2,6 +2,7 @@ import json
 import logging
 import google.generativeai as genai
 from typing import List, Dict, Any, Optional
+from google.api_core.exceptions import ResourceExhausted
 from app.config import GEMINI_API_KEY, MODEL_NAME, TEMPERATURE, MAX_OUTPUT_TOKENS, MAX_RECOMMENDATIONS, TOP_K_RETRIEVAL
 from app.schemas import Message, ChatResponse, Recommendation
 from app.catalog import Assessment, format_assessment_context, get_primary_test_type
@@ -165,6 +166,40 @@ class SHLAgent:
             recommendations=recommendations,
             end_of_conversation=result.get("end_of_conversation", False),
         )
+
+    def _build_retrieval_fallback(self, messages: List[Message], reason: str) -> ChatResponse:
+        latest_user_msg = ""
+        for msg in reversed(messages):
+            if msg.role == "user":
+                latest_user_msg = msg.content
+                break
+
+        assessments = self.retriever.retrieve(query=latest_user_msg, top_k=MAX_RECOMMENDATIONS)
+        recommendations = []
+        for assessment in assessments:
+            recommendations.append(Recommendation(
+                name=assessment.name,
+                url=assessment.link,
+                test_type=get_primary_test_type(assessment),
+            ))
+
+        if recommendations:
+            reply = (
+                "I’m temporarily unable to use the LLM right now, so I’m falling back to catalog search. "
+                "Here are the closest SHL assessments I found."
+            )
+        else:
+            reply = (
+                "I’m temporarily unable to use the LLM right now and I couldn’t find a strong catalog match. "
+                "Please try again shortly."
+            )
+
+        logger.warning("Using retrieval fallback because Gemini request failed: %s", reason)
+        return ChatResponse(
+            reply=reply,
+            recommendations=recommendations,
+            end_of_conversation=False,
+        )
     
     def process(self, messages: List[Message]) -> ChatResponse:
         """Main entry point: process a chat request and return a response."""
@@ -282,6 +317,9 @@ class SHLAgent:
             
             # Pass 2: Generate recommendations
             return self._generate_recommendations(messages, requirements, assessments)
+
+        except ResourceExhausted as exc:
+            return self._build_retrieval_fallback(messages, str(exc))
         
         except Exception as e:
             logger.error(f"Agent error: {e}", exc_info=True)
