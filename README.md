@@ -14,8 +14,8 @@ A conversational AI agent that helps hiring managers and recruiters find the rig
 
 - **FastAPI** — REST API framework
 - **Google Gemini 2.0 Flash** — LLM for conversation and reasoning
-- **Sentence-Transformers** — Semantic embeddings (all-MiniLM-L6-v2)
-- **FAISS** — Vector similarity search
+- **Lightweight hashed retrieval** — Default retrieval backend for low-memory deployment
+- **Optional Sentence-Transformers** — Can be enabled locally with `USE_SENTENCE_TRANSFORMERS=true`
 
 ## Setup
 
@@ -28,6 +28,7 @@ A conversational AI agent that helps hiring managers and recruiters find the rig
    ```bash
    pip install -r requirements.txt
    ```
+  To enable the heavier semantic backend locally, install `sentence-transformers` and `faiss-cpu`, then set `USE_SENTENCE_TRANSFORMERS=true`.
 4. Run the server:
    ```bash
    py -m uvicorn app.main:app --host 0.0.0.0 --port 8000

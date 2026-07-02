@@ -16,7 +16,7 @@ except ModuleNotFoundError:
     SentenceTransformer = None
 
 from app.catalog import Assessment
-from app.config import EMBEDDING_MODEL, TOP_K_RETRIEVAL
+from app.config import EMBEDDING_MODEL, TOP_K_RETRIEVAL, USE_SENTENCE_TRANSFORMERS
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,10 @@ class CatalogRetriever:
         self._build_index()
 
     def _load_embedding_model(self):
+        if not USE_SENTENCE_TRANSFORMERS:
+            logger.info("Using lightweight hashing retrieval backend")
+            return _HashingEmbedder()
+
         if SentenceTransformer is None:
             logger.warning("sentence-transformers is unavailable; using fallback hashing embeddings")
             return _HashingEmbedder()

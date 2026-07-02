@@ -6,6 +6,12 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 MODEL_NAME = "gemini-2.0-flash"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+USE_SENTENCE_TRANSFORMERS = os.getenv("USE_SENTENCE_TRANSFORMERS", "false").strip().lower() in {
+	"1",
+	"true",
+	"yes",
+	"on",
+}
 TEMPERATURE = 0.3
 MAX_OUTPUT_TOKENS = 1024
 TOP_K_RETRIEVAL = 20
