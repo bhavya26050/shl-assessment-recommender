@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,13 +16,22 @@ logger = logging.getLogger(__name__)
 agent: SHLAgent = None
 
 
+def _catalog_path() -> Path:
+    return Path(__file__).resolve().parent.parent / "data" / "shl_product_catalog.json"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global agent
     logger.info("Loading SHL catalog...")
-    catalog_path = os.path.join(os.path.dirname(__file__), "..", "data", "shl_product_catalog.json")
-    catalog = load_catalog(catalog_path)
+    catalog_path = _catalog_path()
+    if not catalog_path.exists():
+        raise RuntimeError(f"Catalog file not found: {catalog_path}")
+
+    catalog = load_catalog(str(catalog_path))
     logger.info(f"Loaded {len(catalog)} assessments")
+    if not catalog:
+        logger.warning("Catalog loaded successfully but contains no assessments")
     
     logger.info("Building search index...")
     retriever = CatalogRetriever(catalog)
@@ -45,7 +55,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

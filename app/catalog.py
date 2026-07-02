@@ -33,7 +33,7 @@ class Assessment:
 
 def load_catalog(path: str) -> List[Assessment]:
     with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+        data = json.loads(f.read(), strict=False)
     
     assessments = []
     for item in data:
@@ -44,8 +44,8 @@ def load_catalog(path: str) -> List[Assessment]:
             
         job_levels = item.get("job_levels", [])
         languages = item.get("languages", [])
-        description = item.get("description", "")
-        name = item.get("name", "")
+        description = item.get("description", "").replace("\r", "").replace("\n", " ").strip()
+        name = item.get("name", "").replace("\r", "").replace("\n", " ").strip()
         
         # Concatenate metadata for embedding-based search
         search_parts = [

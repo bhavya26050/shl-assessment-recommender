@@ -1,0 +1,6 @@
+.env
+.pytest-report.txt
+__pycache__/
+*.py[cod]
+.venv/
+venv/

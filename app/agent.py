@@ -22,15 +22,16 @@ class SHLAgent:
     def __init__(self, retriever: CatalogRetriever):
         self.retriever = retriever
         self.catalog_names = {a.name for a in retriever.catalog}
+        self.system_prompt = SYSTEM_PROMPT
+        if not GEMINI_API_KEY:
+            raise RuntimeError("GEMINI_API_KEY is not configured")
         genai.configure(api_key=GEMINI_API_KEY)
         self.model = genai.GenerativeModel(
             model_name=MODEL_NAME,
             generation_config=genai.GenerationConfig(
                 temperature=TEMPERATURE,
                 max_output_tokens=MAX_OUTPUT_TOKENS,
-                response_mime_type="application/json",
             ),
-            system_instruction=SYSTEM_PROMPT,
         )
     
     def _format_conversation(self, messages: List[Message]) -> str:
@@ -38,7 +39,8 @@ class SHLAgent:
     
     def _call_llm(self, prompt: str) -> str:
         try:
-            response = self.model.generate_content(prompt)
+            full_prompt = f"{self.system_prompt}\n\n{prompt}"
+            response = self.model.generate_content(full_prompt)
             return response.text
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
