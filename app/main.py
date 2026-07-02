@@ -66,6 +66,18 @@ async def health():
     return HealthResponse(status="ok")
 
 
+@app.get("/chat")
+async def chat_help():
+    return {
+        "message": "Use POST /chat with a JSON body containing a messages array.",
+        "example": {
+            "messages": [
+                {"role": "user", "content": "I need to assess a Java developer"}
+            ]
+        },
+    }
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     if not request.messages:

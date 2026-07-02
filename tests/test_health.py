@@ -33,3 +33,11 @@ def test_health_response_schema():
     data = response.json()
     assert "status" in data
     assert isinstance(data["status"], str)
+
+
+def test_chat_get_returns_help_message():
+    client = get_test_client()
+    response = client.get("/chat")
+    assert response.status_code == 200
+    data = response.json()
+    assert "Use POST /chat" in data["message"]
